@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yaya.mapper.SysUserMapper">
+
+    <resultMap id="userMap" type="com.yaya.entity.SysUser">
+        <id column="user_id" property="userId" />
+        <result column="username" property="username" />
+        <result column="nickname" property="nickname" />
+        <result column="dept_id" property="deptId" />
+        <result column="phone" property="phone" />
+        <result column="email" property="email" />
+        <result column="sex" property="sex" />
+        <result column="avatar" property="avatar" />
+        <result column="expired_time" property="expiredTime" />
+        <result column="remark" property="remark" />
+        <result column="is_locked" property="isLocked" />
+        <result column="is_enabled" property="isEnabled" />
+        <result column="create_id" property="createId" />
+        <result column="update_id" property="updateId" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <association property="sysDepartment" javaType="com.yaya.entity.SysDepartment">
+            <id column="dept_id_d" property="deptId" />
+            <result column="dept_name" property="deptName" />
+            <result column="dept_code" property="deptCode" />
+            <result column="dept_logo" property="deptLogo" />
+        </association>
+    </resultMap>
+    <!-- 角色列表(sysRoles)不在SQL中关联查询,由业务层回填,避免多角色关联导致分页行数膨胀 -->
+    <select id="getSysUserPage" resultMap="userMap">
+        SELECT
+            u.user_id,
+            u.username,
+            u.nickname,
+            u.dept_id,
+            u.phone,
+            u.email,
+            u.sex,
+            u.avatar,
+            u.expired_time,
+            u.remark,
+            u.is_locked,
+            u.is_enabled,
+            u.create_id,
+            u.update_id,
+            u.create_time,
+            u.update_time,
+
+            d.dept_id as dept_id_d,
+            d.dept_name,
+            d.dept_code,
+            d.dept_logo,
+            d.tree_path
+        FROM
+            sys_user u
+            LEFT JOIN sys_department d ON u.dept_id = d.dept_id
+        <where>
+            u.is_deleted=0
+            <if test="deptId!=null">AND (d.dept_id=#{deptId} OR FIND_IN_SET(#{deptId}, d.tree_path))</if>
+            <if test="isEnabled!=null">AND u.is_enabled=#{isEnabled}</if>
+            <if test="roleName!=null and roleName!=''">AND EXISTS (SELECT 1 FROM sys_user_role ur INNER JOIN sys_role r ON ur.role_id = r.role_id WHERE ur.user_id = u.user_id AND r.role_name LIKE CONCAT('%',#{roleName},'%'))</if>
+            <if test="username!=null and username!=''">AND u.username LIKE CONCAT('%',#{username},'%')</if>
+            <if test="nickname!=null and nickname!=''">AND u.nickname LIKE CONCAT('%',#{nickname},'%')</if>
+            <if test="start!=null and end!=null">
+                AND u.create_time<![CDATA[>=]]>#{start} AND u.create_time<![CDATA[<=]]>#{end}
+            </if>
+        </where>
+        ORDER BY update_time DESC
+    </select>
+    
+    <select id="getSysUserCount" resultType="long">
+        SELECT
+            COUNT( user_id )
+        FROM
+            sys_user
+        WHERE
+        dept_id IN ( SELECT DISTINCT dept_id FROM sys_department WHERE dept_id = #{deptId} OR FIND_IN_SET( #{deptId}, tree_path ) )
+    </select>
+</mapper>
