@@ -69,11 +69,11 @@ public class JwtUtils {
     }
 
     /** 启动时解析得到的密钥对(优先环境变量, 缺失则生成临时密钥) */
-    private static final Map<String, String> KEY_PAIR = loadKeyPair();
+    private static final Map<String, String> KEY_PAIR;
     //公钥
-    private static final String PUBLIC_KEY_STR = KEY_PAIR.get(KEY_PUBLIC);
+    private static final String PUBLIC_KEY_STR;
     //私钥
-    private static final String PRIVATE_KEY_STR = KEY_PAIR.get(KEY_PRIVATE);
+    private static final String PRIVATE_KEY_STR;
     //公钥签名器(用来验签)
     private static final JWTSigner PUBLIC_SIGNER;
     //私钥签名器(用来签发)
@@ -81,15 +81,17 @@ public class JwtUtils {
     // 允许服务器之间存在 5 秒钟的时钟漂移
     private static final long ALLOW_SKEW_SECONDS = 5L;
 
-    //初始化签名器
+    //初始化密钥对与签名器
     static {
-        //私钥对象
+        //1. 解析密钥对(环境变量优先, 否则生成临时密钥)
+        KEY_PAIR = loadKeyPair();
+        PUBLIC_KEY_STR = KEY_PAIR.get(KEY_PUBLIC);
+        PRIVATE_KEY_STR = KEY_PAIR.get(KEY_PRIVATE);
+        //2. 私钥对象 + 私钥签名器
         PrivateKey privateKey = SecureUtil.generatePrivateKey(SignAlgorithm.SHA256withRSA.getValue(), Base64.decode(PRIVATE_KEY_STR));
-        //创建私钥签名器
         PRIVATE_SIGNER = JWTSignerUtil.rs256(privateKey);
-        //公钥对象
+        //3. 公钥对象 + 公钥签名器
         PublicKey publicKey = SecureUtil.generatePublicKey(SignAlgorithm.SHA256withRSA.getValue(), Base64.decode(PUBLIC_KEY_STR));
-        //创建公钥签名器
         PUBLIC_SIGNER = JWTSignerUtil.rs256(publicKey);
     }
 
